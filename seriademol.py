@@ -515,6 +515,8 @@ class ComConnected(object):
                 #     print('send_data:%s' % send_data)
                 #     self.send(send_order=send_order, send_data=send_data)
 
+    f_w = None
+
     def order_analysis(self, data):
         """
         order analysis order
@@ -528,6 +530,9 @@ class ComConnected(object):
 
         response_order = ''
         response_message = ''
+
+        # 升级文件总包数
+        package_num = 0
 
         if rs_order == OrderPortEnum.RECV_SET_DEVICE_WORK_MODE.value:
             # 设置设备工作状态
@@ -572,13 +577,35 @@ class ComConnected(object):
         elif rs_order == OrderPortEnum.RECV_UPDATE.value:
             # 开启升级功能
             print("开启固件升级功能,总包数:%s" % int(rs_message, 16))
+            package_num = int(rs_message, 16)
             response_order = OrderPortEnum.RETURN_READY_RECV_UPDATE_FILE.value
             response_message = rs_message
         elif rs_order == OrderPortEnum.RECV_PACKAGE.value:
-            # 手机端传送升级文件
+            # 手机端传送升级文件（分包）
+            # 新建升级文件
+            if self.f_w is None:
+                print('文件为空，打开文件')
+                self.f_w = open('firmware/firmware_update.zip', 'wb')
+
             recv_package_hex = rs_message[:4]
             recv_package_int = int(recv_package_hex, 16)
+            recv_package_content = rs_message[4:]
             print('手机传送升级文件中...当前包:%s' % recv_package_int)
+            print('文件内容：%s' % recv_package_content)
+
+            # 写文件位置
+            write_position = 43 * (recv_package_int - 1)
+            # 移动写文件指针
+            self.f_w.seek(write_position)
+            # 写文件
+            self.f_w.write(bytes.fromhex(recv_package_content))
+            # 如果文件是最后一包关闭文件
+            if package_num == recv_package_int:
+                print('传输完毕，关闭文件')
+                self.f_w.close()
+                self.f_w = None
+
+            # 返回
             response_order = OrderPortEnum.RETURN_PACKAGE_OK.value
             response_message = recv_package_hex
         elif rs_order == OrderPortEnum.RECV_SYNC_DATA.value:
