@@ -1,5 +1,6 @@
 import binascii
 import datetime
+import os
 import random
 import threading
 import time
@@ -131,6 +132,12 @@ class OrderPortEnum(Enum):
     # 发送 工程师模式下获取 是否触发限位
     RETURN_ENGINEER_LIMIT = '29'
 
+    # --------------- 是否有固件升级文件 ------------------
+    # 接收 工程师模式下获取 是否触发限位 命令
+    RECV_HAVE_FIRMWRAE_FILE = '2A'
+    # 发送 工程师模式下获取 是否触发限位
+    RETURN_HAVE_FIRMWRAE_FILE = '2B'
+
 
 # 设备类
 class Device(object):
@@ -258,6 +265,11 @@ def is_opened(func):
     return is_opened_inner
 
 
+# 文件路径
+firmware_file = "firmware/firmware_update.zip"
+
+
+# 串口连接类
 class ComConnected(object):
     current_device = None
 
@@ -312,14 +324,12 @@ class ComConnected(object):
     @is_opened
     def send(self, send_order: str, send_data: str):
         data_len = (len(send_order) + len(send_data)) // 2
-        # print("datalen:%s" % data_len)
 
         data_len_byte = self.int_2_bytes(data_len)
         # add
         CRC_int = (data_len + int(send_data, 16)) & 0xff
         CRC_str = self.int_2_bytes(CRC_int)
         ssr = "AA" + data_len_byte + send_order + send_data + CRC_str + "BB"
-        # print("发送数据：%s" % ssr)
         self.ser.write(bytes.fromhex(ssr))
 
     def get_byte_data(self, byte_len=1):
@@ -374,7 +384,6 @@ class ComConnected(object):
         """
         print("等待接收数据中....")
         while True:
-            # return_str = self.ser.readline().decode("utf8")
             time.sleep(0.5)
 
             count = self.ser.inWaiting()
@@ -390,132 +399,19 @@ class ComConnected(object):
                     # print("var:%s" % var)
                     for s in list(var):
                         self.read_queue.put(s)
-                #
-                #
-                #     print('接收到数据:%s' % var)
-                #     # 如果不是AA开始，BB结束提示信息错误
-                #     if not (var.startswith("AA") and var.endswith("BB")):
-                #         print('无效指令，不做回应')
-                #     else:
-                #         try:
-                #             # 接口实现
-                #             # AABB删除
-                #             rs = var.replace("AA", "").replace("BB", "")
-                #             # 包序列
-                #             rs_num = rs[0:2]
-                #             print('包序列：' + rs_num)
-                #             # 命令
-                #             rs_order = rs[2:4]
-                #             print('命令：' + rs_order)
-                #
-                #             rs_data = rs[4:-2]
-                #             rs_check = rs[-2:]
-                #
-                #             print('数据：' + rs_data)
-                #             print('验证：' + rs_check)
-                #             # AA030103000000030001BB
-                #             # AA030103000000030001BB
-                #
-                #             if rs_order == OrderPortEnum.RECV_SET_DEVICE_WORK_MODE.value:
-                #                 # 设置设备工作状态
-                #                 print("order:设置设备工作状态")
-                #                 mode_str = rs_data[:2]
-                #                 mins_int = int(rs_data[2:], 16)
-                #                 self.current_device.set_operating_mode(mode_str, mins_int)
-                #                 # 返回的命令与order
-                #                 send_order = OrderPortEnum.RETURN_SET_DEVICE_WORK_MODE.value
-                #                 send_data = '00'
-                #
-                #             elif rs_order == OrderPortEnum.RECV_GET_DEVICE_WORK_MODE.value:
-                #                 # 获取设备工作状态
-                #                 print("order:获取设备工作状态")
-                #                 send_order = OrderPortEnum.RETURN_GET_DEVICE_WORK_MODE.value
-                #                 # 获取设备工作状态
-                #                 send_data = self.current_device.get_operating_mode()
-                #
-                #             elif rs_order == OrderPortEnum.RECV_GET_DEVICE_SENSOR_INFO.value:
-                #                 # 读取传感器信息功能
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_GET_DEVICE_MOTOR_INFO.value:
-                #                 # 读取各电机状态信息
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_SET_DEVICE_MOTOR_RUN.value:
-                #                 # 设置某个电机开始工作
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_SET_DEVICE_MOTOR_STOP_RUN.value:
-                #                 # 设置某个电机停止工作
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_SET_DEVICE_TIME.value:
-                #                 # 设置开发板时间功能
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_START_RECORDING.value:
-                #                 # 开启录音功能
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_READY_RECV_RECORDING_FILE.value:
-                #                 # 手机已经准备好接收录音文件
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_READY_RECV_RECORDING_FILE_OK.value:
-                #                 # 手机端接收录音文件完成/错误
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_UPDATE.value:
-                #                 # 开启升级功能
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_UPDATE_FILE.value:
-                #                 # 手机端传送升级文件
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_UPDATE_FILE_FINISHED.value:
-                #                 # 手机端传送升级文件完成
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_SYNC_DATA.value:
-                #                 # 同步主控板数据到手机端
-                #                 pass
-                #             elif rs_order == OrderPortEnum.RECV_SYNC_DATA_OK.value:
-                #                 # 手机收到数据
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_DEVICE_INFO.value:
-                #                 # 接收获取设备信息  id和版本号
-                #                 print('order:接收获取设备信息  id和版本号')
-                #                 send_data = self.current_device.get_device_info()
-                #                 send_order = OrderPortEnum.RETURN_DEVICE_INFO.value
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_START_NO_SNORE.value:
-                #                 # 工程师模式下启动止鼾
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_STOP_NO_SNORE.value:
-                #                 # 工程师模式下停止止鼾
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_SNORE.value:
-                #                 # 工程师模式下获取 是否有鼾声，
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_MOTOR_PRESS.value:
-                #                 # 接收 工程师模式下获取 杆头压力传感器数据 命令
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_SHOULDER_PRESS.value:
-                #                 # 接收 工程师模式下获取 肩部压力传感器数据 命令
-                #                 pass
-                #
-                #             elif rs_order == OrderPortEnum.RECV_ENGINEER_LIMIT.value:
-                #                 # 接收 工程师模式下获取 是否触发限位功能 命令
-                #                 pass
-                #
-                #         except Exception as e:
-                #             print("指令解析出错：" + e.__str__())
-                #             print('无效指令，不做回应')
-                #
-                # if send_order:
-                #     print('send_order:%s' % send_order)
-                #     print('send_data:%s' % send_data)
-                #     self.send(send_order=send_order, send_data=send_data)
 
     f_w = None
+    # 升级文件总包数
+    package_num = 0
+
+    # 当前发送文件的路径
+    f_r_path = ''
+    # 当前发送的文件
+    f_r = None
+    # 包数
+    pn = 0
+    # 最后一包的大小
+    last_pn_size = 0
 
     def order_analysis(self, data):
         """
@@ -525,14 +421,8 @@ class ComConnected(object):
         rs_order = data[:2]
         rs_message = data[2:]
 
-        # print("rs_order ：%s" % rs_order)
-        # print("rs_message ：%s" % rs_message)
-
         response_order = ''
         response_message = ''
-
-        # 升级文件总包数
-        package_num = 0
 
         if rs_order == OrderPortEnum.RECV_SET_DEVICE_WORK_MODE.value:
             # 设置设备工作状态
@@ -568,16 +458,83 @@ class ComConnected(object):
             pass
 
         elif rs_order == OrderPortEnum.RECV_START_SEND_FILE.value:
-            # 开启录音功能
-            pass
-        elif rs_order == OrderPortEnum.RECV_PHONE_REQUEST_SOMEONE_PACKAGE.value:
-            # 手机已经准备好接收录音文件
-            pass
+            # 开启文件传输
+            print('开启文件传输')
+            file_type = rs_message[:2]
+            print('需要的文件类型：%s' % file_type)
+            file_date = rs_message[2:]
+            print('需要的文件日期：%s' % file_date)
+            # 查询文件是否存在
+            if file_type == '01':
+                file_name = 'motor_file.db'
+            elif file_type == '02':
+                file_name = 'snore_file.db'
+            elif file_type == '03':
+                file_name = 'position_file.db'
+            elif file_type == '04':
+                file_name = 'snore_intervention.db'
+            elif file_type == '05':
+                file_name = 'record_sound_file.db'
+            self.f_r_path = "dbdata/%s/%s" % (file_date, file_name)
+            print('文件路径%s' % self.f_r_path)
+            if os.path.exists(self.f_r_path):
+                print('%s存在' % file_name)
+                # 查看一共多少包，每包43字节
+                file_size = os.path.getsize(self.f_r_path)
+                print('文件大小：%s字节' % file_size)
+                self.pn = file_size // 43 + 1
+                self.last_pn_size = file_size % 43
+                # 总包数转为十六进制字符串
+                pn_hex_str = hex(self.pn).replace("0x", "")
+                # 变成两字节
+                while len(pn_hex_str) < 4:
+                    pn_hex_str = "0" + pn_hex_str
 
+                response_message = pn_hex_str
+                print('response_message:%s' % response_message)
+                # 打开文件
+                self.f_r = open(self.f_r_path, 'rb')
+            else:
+                # 不存在
+                response_message = "0000"
+            response_order = OrderPortEnum.RETURN_PACKAGE_NUM.value
+        elif rs_order == OrderPortEnum.RECV_PHONE_REQUEST_SOMEONE_PACKAGE.value:
+            # 手机已经准备好接收文件
+            i = int(rs_message, 16)
+            # 如果发来的是0  说明手机接收完成 关闭文件 返回 ’0000
+            if i == 0:
+                print('文件申请完成')
+                if self.f_r is not None:
+                    self.f_r.close()
+                    self.f_r = None
+                response_message = '0000'
+            else:
+                print('手机申请第%s包文件数据：' % i)
+                # 如果发来的不是0 则申请具体包数
+                # 读取对应包数的数据
+                if self.f_r is not None:
+                    # 移动指针到读取位置
+                    self.f_r.seek((i - 1) * 43)
+                    # 如果 手机申请的包不是最后一包 位置为 (i-1) * 43 读取43字节
+                    if i != self.pn:
+                        print('手机申请的不是最后一包：%s' % i)
+                        read_byte = self.f_r.read(43)
+                        print('读取的二进制：%s' % read_byte)
+                        print('转化为十六进制字符串：%s' % read_byte.hex())
+                        response_message = rs_message + read_byte.hex()
+                    # 如果 手机申请的是最后一包 位置为 (i-1) * 43 读取43字节
+                    else:
+                        print('手机申请的是最后一包：%s' % i)
+                        read_byte = self.f_r.read(self.last_pn_size)
+                        print('读取的二进制：%s' % read_byte)
+                        print('转化为十六进制字符串：%s' % read_byte.hex())
+                        response_message = rs_message + read_byte.hex()
+
+            response_order = OrderPortEnum.RETURN_SEND_PACKAGE.value
         elif rs_order == OrderPortEnum.RECV_UPDATE.value:
             # 开启升级功能
-            print("开启固件升级功能,总包数:%s" % int(rs_message, 16))
-            package_num = int(rs_message, 16)
+            self.package_num = int(rs_message, 16)
+            print("开启固件升级功能,总包数:%s" % self.package_num)
             response_order = OrderPortEnum.RETURN_READY_RECV_UPDATE_FILE.value
             response_message = rs_message
         elif rs_order == OrderPortEnum.RECV_PACKAGE.value:
@@ -585,13 +542,21 @@ class ComConnected(object):
             # 新建升级文件
             if self.f_w is None:
                 print('文件为空，打开文件')
-                self.f_w = open('firmware/firmware_update.zip', 'wb')
+                self.f_w = open(firmware_file, 'wb')
 
             recv_package_hex = rs_message[:4]
             recv_package_int = int(recv_package_hex, 16)
+
             recv_package_content = rs_message[4:]
             print('手机传送升级文件中...当前包:%s' % recv_package_int)
             print('文件内容：%s' % recv_package_content)
+            # 如果收到的包数等于0 且 内容等于 '00'的话 关闭文件  并删除文件
+            if recv_package_int == 0 and recv_package_content == '00':
+                print('传输终止，关闭并删除文件')
+                self.f_w.close()
+                os.remove('firmware/firmware_update.zip')
+                self.f_w = None
+                return
 
             # 写文件位置
             write_position = 43 * (recv_package_int - 1)
@@ -600,8 +565,9 @@ class ComConnected(object):
             # 写文件
             self.f_w.write(bytes.fromhex(recv_package_content))
             # 如果文件是最后一包关闭文件
-            if package_num == recv_package_int:
+            if self.package_num == recv_package_int:
                 print('传输完毕，关闭文件')
+                self.package_num = 0
                 self.f_w.close()
                 self.f_w = None
 
@@ -644,9 +610,16 @@ class ComConnected(object):
             # 接收 工程师模式下获取 是否触发限位功能 命令
             pass
 
+        elif rs_order == OrderPortEnum.RECV_HAVE_FIRMWRAE_FILE.value:
+            # 接收 是否有升级固件文件 命令
+            response_order = OrderPortEnum.RETURN_HAVE_FIRMWRAE_FILE.value
+            response_message = "00"
+            if os.path.exists(firmware_file):
+                response_message = "01"
+
         if response_order:
-            # print('send_order:%s' % response_order)
-            # print('send_data:%s' % response_order)
+            print('send_order:%s' % response_order)
+            print('send_data:%s' % response_message)
             self.send(send_order=response_order, send_data=response_message)
 
 
