@@ -30,9 +30,11 @@ def datetimedemo():
 if __name__ == '__main__':
     # timedemo()
     # datetimedemo()
-    f = (2 + 4)//2
+    # f = (2 + 4)//2
     # print(f.hex())
-    print(hex(f))
+    # print(hex(f))
 
     # f_hex = hex(f)
     # print(("00" + f_hex.replace('0x', ""))[-2:])
+    for i in range(0, 100):
+        print(''.join([random.choice("0123456789ABCDEF") for _ in range(6)]))

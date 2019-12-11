@@ -449,10 +449,23 @@ class ComConnected(object):
             pass
         elif rs_order == OrderPortEnum.RECV_SET_DEVICE_MOTOR_RUN.value:
             # 设置某个电机开始工作
-            pass
+            print("设置某个电机开始工作")
+            # 电机号
+            motor_num = rs_message[0:2]
+            # 方向 0 上 1下
+            move_directions = rs_message[2:4] == 1
+            # 速度挡位 1-5
+            move_speed = rs_message[4:6]
+            # 时间
+            move_duration = rs_message[6:8]
+            print("第%s个电机向%s以%s挡位运动%s秒" % (motor_num, "上" if move_directions else "下", move_speed, move_duration))
+            response_order = OrderPortEnum.RETURN_SET_DEVICE_MOTOR_RUN.value
+            response_message = "0%d" % random.randint(0, 1)
         elif rs_order == OrderPortEnum.RECV_SET_DEVICE_MOTOR_STOP_RUN.value:
             # 设置某个电机停止工作
-            pass
+            print("设置某个电机停止工作")
+            response_order = OrderPortEnum.RETURN_SET_DEVICE_MOTOR_STOP_RUN.value
+            response_message = "0%d" % random.randint(0, 1)
         elif rs_order == OrderPortEnum.RECV_SET_DEVICE_TIME.value:
             # 设置开发板时间功能
             pass
@@ -588,27 +601,50 @@ class ComConnected(object):
             response_message = self.current_device.get_device_info()
         elif rs_order == OrderPortEnum.RECV_ENGINEER_START_NO_SNORE.value:
             # 工程师模式下启动止鼾
-            pass
+            print("工程师模式下启动止鼾")
+            # 第1字节 00 无鼾声 01 有鼾声
+            # 第2字节 00 侧卧  01 仰卧
+            has_Snore = (int(rs_message[1:2], 16) == 1)
+            side_sleep = (int(rs_message[3:4], 16) == 0)
+            print("启动止鼾：%s %s" % ("有鼾声" if has_Snore else "无鼾声", "侧卧" if side_sleep else "仰卧"))
+            response_order = OrderPortEnum.RETURN_ENGINEER_START_NO_SNORE.value
+            response_message = "0%d" % random.randint(0, 1)
 
         elif rs_order == OrderPortEnum.RECV_ENGINEER_STOP_NO_SNORE.value:
             # 工程师模式下停止止鼾
-            pass
+            print("工程师模式下停止止鼾")
+            response_order = OrderPortEnum.RETURN_ENGINEER_STOP_NO_SNORE.value
+            response_message = "0%d" % random.randint(0, 1)
 
         elif rs_order == OrderPortEnum.RECV_ENGINEER_SNORE.value:
             # 工程师模式下获取 是否有鼾声，
-            pass
-
+            print("工程师模式下获取 是否有鼾声")
+            response_order = OrderPortEnum.RETURN_ENGINEER_SNORE.value
+            response_message = "0%d" % random.randint(0, 1)
         elif rs_order == OrderPortEnum.RECV_ENGINEER_MOTOR_PRESS.value:
             # 接收 工程师模式下获取 杆头压力传感器数据 命令
-            pass
-
+            print("工程师模式下获取 杆头压力传感器数据")
+            response_order = OrderPortEnum.RETURN_ENGINEER_MOTOR_PRESS.value
+            which_press = "0%d" % random.randint(1, 6)
+            singles = "0%d" % random.randint(1, 9)
+            deciles = "0%d" % random.randint(1, 9)
+            percentile = "0%d" % random.randint(1, 9)
+            Thousands = "0%d" % random.randint(1, 9)
+            response_message = which_press + singles + deciles + percentile + Thousands
         elif rs_order == OrderPortEnum.RECV_ENGINEER_SHOULDER_PRESS.value:
             # 接收 工程师模式下获取 肩部压力传感器数据 命令
-            pass
-
+            # 第几行
+            i = int(rs_message, 16)
+            print("工程师模式下获取 第%s行肩部压力传感器数据" % i)
+            response_order = OrderPortEnum.RETURN_ENGINEER_SHOULDER_PRESS.value
+            which_row = "0%d" % random.randint(0, 3)
+            # 随机生成6位16进制数据
+            response_message = rs_message + ''.join([random.choice("0123456789ABCDEF") for _ in range(6)])
         elif rs_order == OrderPortEnum.RECV_ENGINEER_LIMIT.value:
             # 接收 工程师模式下获取 是否触发限位功能 命令
-            pass
+            print("工程师模式下获取 是否触发限位功能")
+            response_order = OrderPortEnum.RETURN_ENGINEER_LIMIT.value
+            response_message = "0%d" % random.randint(0, 2)
 
         elif rs_order == OrderPortEnum.RECV_HAVE_FIRMWRAE_FILE.value:
             # 接收 是否有升级固件文件 命令

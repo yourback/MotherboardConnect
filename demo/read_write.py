@@ -45,7 +45,6 @@ if __name__ == '__main__':
                 print('传输失败')
                 # 传输失败
                 continue
-
             i += 1
 
     f_w.close()
