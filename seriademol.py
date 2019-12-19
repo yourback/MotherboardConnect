@@ -488,6 +488,8 @@ class ComConnected(object):
                 file_name = 'snore_intervention.db'
             elif file_type == '05':
                 file_name = 'record_sound_file.db'
+            elif file_type == '06':
+                file_name = 'sleep_data.txt'
             self.f_r_path = "dbdata/%s/%s" % (file_date, file_name)
             print('文件路径%s' % self.f_r_path)
             if os.path.exists(self.f_r_path):
