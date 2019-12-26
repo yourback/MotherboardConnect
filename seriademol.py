@@ -5,10 +5,9 @@ import random
 import threading
 import time
 from enum import Enum
-from queue import Queue
+
 from time import sleep
 import queue
-from typing import Any
 
 import serial  # 导入模块
 
@@ -137,6 +136,18 @@ class OrderPortEnum(Enum):
     RECV_HAVE_FIRMWRAE_FILE = '2A'
     # 发送 工程师模式下获取 是否触发限位
     RETURN_HAVE_FIRMWRAE_FILE = '2B'
+
+    # --------------- 工程师模式下获取 睡姿算法结果 ------------------
+    # 接收 工程师模式下获取 睡姿算法结果
+    RECV_ENGINEER_POSITION_RESULT = '2C'
+    # 发送 工程师模式下获取 睡姿算法结果
+    RETURN_ENGINEER_POSITION_RESULT = '2D'
+
+    # --------------- 工程师模式下切换电机 ------------------
+    # 接收 工程师模式下切换电机
+    RECV_ENGINEER_CHANGE_MOTOR = '2E'
+    # 发送 工程师模式下切换电机
+    RETURN_ENGINEER_CHANGE_MOTOR = '2F'
 
 
 # 设备类
@@ -654,6 +665,16 @@ class ComConnected(object):
             response_message = "00"
             if os.path.exists(firmware_file):
                 response_message = "01"
+        elif rs_order == OrderPortEnum.RECV_ENGINEER_POSITION_RESULT.value:
+            # 工程师模式下获取 睡姿算法结果
+            response_order = OrderPortEnum.RETURN_ENGINEER_POSITION_RESULT.value
+            result_int = random.randint(0, 2)
+            response_message = "0%d" % result_int
+        elif rs_order == OrderPortEnum.RECV_ENGINEER_CHANGE_MOTOR.value:
+            print('切换到 %s 号电机' % int(rs_message, 16))
+            # 工程师模式下切换电机
+            response_order = OrderPortEnum.RETURN_ENGINEER_CHANGE_MOTOR.value
+            response_message = "00"
 
         if response_order:
             print('send_order:%s' % response_order)
