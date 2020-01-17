@@ -36,5 +36,17 @@ if __name__ == '__main__':
 
     # f_hex = hex(f)
     # print(("00" + f_hex.replace('0x', ""))[-2:])
-    for i in range(0, 100):
-        print(''.join([random.choice("0123456789ABCDEF") for _ in range(6)]))
+    # for i in range(0, 100):
+    #     print(''.join([random.choice("0123456789ABCDEF") for _ in range(6)])
+
+    d1 = datetime.datetime.now().date()
+    print(d1)
+
+    date_str = "20191231"
+    date = datetime.datetime.strptime(date_str, "%Y%m%d").date()
+    print(date)
+
+    if date >= d1:
+        print('大于等于')
+    else:
+        print('小于')
